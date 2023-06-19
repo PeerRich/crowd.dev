@@ -731,27 +731,75 @@ export default class MemberService extends LoggerBase {
     const transaction = await SequelizeRepository.createTransaction(this.options)
 
     try {
-      let out = []
+      const paginate = true
       if (type === IMemberMergeSuggestionsType.USERNAME) {
-        out = await MemberRepository.mergeSuggestionsByUsername(numberOfHours, {
-          ...this.options,
-          transaction,
-        })
+        let offset = 0
+        const limit = 50
+        while (paginate) {
+          const mergeResult: IMemberMergeSuggestion[] =
+            await MemberRepository.mergeSuggestionsByUsername(
+              numberOfHours,
+              {
+                ...this.options,
+                transaction,
+              },
+              limit,
+              offset,
+            )
+
+          if (!mergeResult.length) {
+            break
+          }
+          await this.addToMerge(mergeResult)
+          offset = mergeResult.length + offset + 1
+        }
       }
       if (type === IMemberMergeSuggestionsType.EMAIL) {
-        out = await MemberRepository.mergeSuggestionsByEmail(numberOfHours, {
-          ...this.options,
-          transaction,
-        })
+        let offset = 0
+        const limit = 50
+        while (paginate) {
+          const mergeResult: IMemberMergeSuggestion[] =
+            await MemberRepository.mergeSuggestionsByEmail(
+              numberOfHours,
+              {
+                ...this.options,
+                transaction,
+              },
+              limit,
+              offset,
+            )
+
+          if (!mergeResult.length) {
+            break
+          }
+          await this.addToMerge(mergeResult)
+          offset = mergeResult.length + offset + 1
+        }
       }
       if (type === IMemberMergeSuggestionsType.SIMILARITY) {
-        out = await MemberRepository.mergeSuggestionsBySimilarity(numberOfHours, {
-          ...this.options,
-          transaction,
-        })
+        let offset = 0
+        const limit = 50
+        while (paginate) {
+          const mergeResult: IMemberMergeSuggestion[] =
+            await MemberRepository.mergeSuggestionsBySimilarity(
+              numberOfHours,
+              {
+                ...this.options,
+                transaction,
+              },
+              limit,
+              offset,
+            )
+
+          if (!mergeResult.length) {
+            break
+          }
+          await this.addToMerge(mergeResult)
+          offset = mergeResult.length + offset + 1
+        }
       }
       await SequelizeRepository.commitTransaction(transaction)
-      return out
+      return
     } catch (error) {
       await SequelizeRepository.rollbackTransaction(transaction)
       this.log.error(error)

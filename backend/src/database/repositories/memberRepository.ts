@@ -1904,6 +1904,8 @@ where m."deletedAt" is null
   static async mergeSuggestionsByUsername(
     numberOfHours,
     options: IRepositoryOptions,
+    limit?: number,
+    offset: number = 0,
   ): Promise<IMemberMergeSuggestion[]> {
     const transaction = SequelizeRepository.getTransaction(options)
 
@@ -1963,12 +1965,16 @@ where m."deletedAt" is null
     )
     -- Select everything from the final CTE "identity_join"
     SELECT *
-    FROM identity_join;`
+    FROM identity_join
+    LIMIT :limit
+    OFFSET :offset;`
 
     const suggestions = await seq.query(query, {
       replacements: {
         tenantId: tenant.id,
         numberOfHours: `${numberOfHours} hours`,
+        limit,
+        offset,
       },
       type: QueryTypes.SELECT,
       transaction,
@@ -1984,6 +1990,8 @@ where m."deletedAt" is null
   static async mergeSuggestionsByEmail(
     numberOfHours,
     options: IRepositoryOptions,
+    limit: number = 10,
+    offset: number = 0,
   ): Promise<IMemberMergeSuggestion[]> {
     const transaction = SequelizeRepository.getTransaction(options)
 
@@ -2038,12 +2046,16 @@ where m."deletedAt" is null
     )
     -- Select all columns from the email_join CTE
     SELECT *
-    FROM email_join;`
+    FROM email_join
+    LIMIT :limit
+    OFFSET :offset;`
 
     const suggestions = await seq.query(query, {
       replacements: {
         tenantId: tenant.id,
         numberOfHours: `${numberOfHours} hours`,
+        limit,
+        offset,
       },
       type: QueryTypes.SELECT,
       transaction,
@@ -2057,6 +2069,8 @@ where m."deletedAt" is null
   static async mergeSuggestionsBySimilarity(
     numberOfHours,
     options: IRepositoryOptions,
+    limit: number = 10,
+    offset: number = 0,
   ): Promise<IMemberMergeSuggestion[]> {
     const transaction = SequelizeRepository.getTransaction(options)
 
@@ -2123,12 +2137,16 @@ where m."deletedAt" is null
     )
     -- Select everything from the final CTE "exclude_already_processed"
     SELECT *
-    FROM exclude_already_processed;`
+    FROM exclude_already_processed
+    LIMIT :limit
+    OFFSET :offset;`
 
     const suggestions = await seq.query(query, {
       replacements: {
         tenantId: tenant.id,
         numberOfHours: `${numberOfHours} hours`,
+        limit,
+        offset,
       },
       type: QueryTypes.SELECT,
       transaction,
