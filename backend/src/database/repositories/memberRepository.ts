@@ -56,7 +56,6 @@ class MemberRepository {
     const transaction = SequelizeRepository.getTransaction(options)
 
     const segment = SequelizeRepository.getStrictlySingleActiveSegment(options)
-
     const record = await options.database.member.create(
       {
         ...lodash.pick(data, [
@@ -1522,9 +1521,6 @@ class MemberRepository {
         ORDER BY ${orderByString}
         LIMIT :limit OFFSET :offset;
     `
-
-    console.log('filterString', filterString)
-    console.log('params', params)
 
     const sumMemberCount = (countResults) =>
       countResults.map((row) => parseInt(row.totalCount, 10)).reduce((a, b) => a + b, 0)
