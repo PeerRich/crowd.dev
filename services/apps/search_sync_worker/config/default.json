@@ -1,0 +1,6 @@
+{
+  "db": {},
+  "sqs": {},
+  "redis": {},
+  "opensearch": {}
+}

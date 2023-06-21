@@ -22,6 +22,7 @@ import SegmentRepository from '../database/repositories/segmentRepository'
 import SegmentService from './segmentService'
 
 const IS_GITHUB_COMMIT_DATA_ENABLED = GITHUB_CONFIG.isCommitDataEnabled === 'true'
+import { getSearchSyncWorkerEmitter } from '../serverless/utils/serviceSQS'
 
 export default class ActivityService extends LoggerBase {
   options: IServiceOptions
@@ -45,9 +46,15 @@ export default class ActivityService extends LoggerBase {
    * @param existing If the activity already exists, the activity. If it doesn't or we don't know, false
    * @returns The upserted activity
    */
-  async upsert(data, existing: boolean | any = false, fireCrowdWebhooks: boolean = true) {
+  async upsert(
+    data,
+    existing: boolean | any = false,
+    fireCrowdWebhooks: boolean = true,
+    fireSync: boolean = true,
+  ) {
     const transaction = await SequelizeRepository.createTransaction(this.options)
     const repositoryOptions = { ...this.options, transaction }
+    const searchSyncEmitter = await getSearchSyncWorkerEmitter()
 
     try {
       if (data.member) {
@@ -111,9 +118,16 @@ export default class ActivityService extends LoggerBase {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           organizationId: (oldValue, _newValue) => oldValue,
         })
-        record = await ActivityRepository.update(id, toUpdate, repositoryOptions)
-        if (data.parent) {
-          await this.addToConversation(record.id, data.parent, transaction)
+        record = await ActivityRepository.update(id, toUpdate, {
+          ...this.options,
+          transaction,
+        })
+
+        if (fireSync) {
+          await searchSyncEmitter.triggerMemberSync(
+            this.options.currentTenant.id,
+            data.member ? data.member.id : data.memberId,
+          )
         }
       } else {
         if (!data.sentiment) {
@@ -128,6 +142,13 @@ export default class ActivityService extends LoggerBase {
         }
 
         record = await ActivityRepository.create(data, repositoryOptions)
+
+        if (fireSync) {
+          await searchSyncEmitter.triggerMemberSync(
+            this.options.currentTenant.id,
+            data.member ? data.member.id : data.memberId,
+          )
+        }
 
         // Only track activity's platform and timestamp and memberId. It is completely annonymous.
         telemetryTrack(
@@ -449,6 +470,7 @@ export default class ActivityService extends LoggerBase {
 
   async createWithMember(data, fireCrowdWebhooks: boolean = true) {
     const logger = this.options.log
+    const searchSyncEmitter = await getSearchSyncWorkerEmitter()
 
     const segment = await SequelizeRepository.getStrictlySingleActiveSegment(this.options)
 
@@ -529,6 +551,7 @@ export default class ActivityService extends LoggerBase {
         },
         existingMember,
         fireCrowdWebhooks,
+        false,
       )
 
       if (data.objectMember) {
@@ -586,7 +609,9 @@ export default class ActivityService extends LoggerBase {
         }
       }
 
-      const record = await this.upsert(data, activityExists, fireCrowdWebhooks)
+      const record = await this.upsert(data, activityExists, fireCrowdWebhooks, false)
+
+      await searchSyncEmitter.triggerMemberSync(this.options.currentTenant.id, member.id)
 
       await SequelizeRepository.commitTransaction(transaction)
 
