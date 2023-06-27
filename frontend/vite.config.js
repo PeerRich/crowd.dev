@@ -12,6 +12,14 @@ import dns from 'dns';
 dns.setDefaultResultOrder('verbatim');
 
 export default defineConfig({
+  build: {
+    fileNames: ({ path }) => {
+      const ext = /\.[^.]+$/.exec(path)[0];
+      const base = path.split('/').pop().replace(/\.[^.]+$/, '');
+
+      return `${base}.[hash]${ext}`;
+    },
+  },
   define: {
     'import.meta.env': process.env,
   },
