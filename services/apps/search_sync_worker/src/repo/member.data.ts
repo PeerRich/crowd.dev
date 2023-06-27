@@ -17,12 +17,14 @@ export interface IDbMemberOrganization {
 export interface IDbMemberSyncData {
   id: string
   tenantId: string
+  segmentId: string
   displayName: string | null
   attributes: unknown | null
   emails: string[] | null
   score: number | null
   lastEnriched: string | null
   joinedAt: string
+  createdAt: string
   totalReach: number
   numberOfOpenSourceContributions: number
 
@@ -39,4 +41,10 @@ export interface IDbMemberSyncData {
   tags: IDbMemberTagData[]
   toMergeIds: string[]
   noMergeIds: string[]
+}
+
+export interface IDbSegmentInfo {
+  id: string
+  parentId: string
+  grandParentId: string
 }

@@ -30,8 +30,6 @@ export default class SequelizeRepository {
     tenant?,
     segments?,
   ): Promise<IRepositoryOptions> {
-    const redis = await getRedisClient(REDIS_CONFIG, true)
-
     return {
       log: getServiceLogger(),
       database: await databaseInit(),
@@ -40,7 +38,7 @@ export default class SequelizeRepository {
       currentSegments: segments,
       bypassPermissionValidation: true,
       language: 'en',
-      redis,
+      redis: await getRedisClient(REDIS_CONFIG, true),
     }
   }
 

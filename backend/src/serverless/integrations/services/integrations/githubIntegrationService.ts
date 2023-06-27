@@ -1332,7 +1332,7 @@ export class GithubIntegrationService extends IntegrationServiceBase {
           username: member.username[PlatformType.GITHUB].username,
           platform: PlatformType.GITHUB,
           channel: repo.url,
-          url: `https://github.com/${repo.owner}/${repo.name}.git`,
+          url: `${repo.url}/commit/${record.commit.oid}`,
           body: record.commit.message,
           type: 'authored-commit',
           sourceId: record.commit.oid,
@@ -1343,7 +1343,7 @@ export class GithubIntegrationService extends IntegrationServiceBase {
             deletions: record.commit.deletions,
             lines: record.commit.additions - record.commit.deletions,
             isMerge: record.commit.parents.totalCount > 1,
-            isMainBranch: ['master', 'main'].includes(data.repository.pullRequest.headRefName),
+            isMainBranch: false,
           },
           member,
         })

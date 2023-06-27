@@ -96,7 +96,7 @@ export class OpensearchQueryParser {
     const operator = conditionKeys[0] as Operator
     let value = filters[operator]
 
-    if (typeof value === 'string') {
+    if (typeof value === 'string' && !searchKey.startsWith('date')) {
       value = value.toLowerCase()
     }
 
@@ -141,7 +141,7 @@ export class OpensearchQueryParser {
       return {
         wildcard: {
           [searchKey]: {
-            value: `${value}*`,
+            value: `*${value}*`,
           },
         },
       }
@@ -173,7 +173,7 @@ export class OpensearchQueryParser {
           must_not: {
             wildcard: {
               [searchKey]: {
-                value: `${value}*`,
+                value: `*${value}*`,
               },
             },
           },

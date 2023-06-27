@@ -30,6 +30,9 @@ import MemberAttributeSettingsService from './memberAttributeSettingsService'
 import OrganizationService from './organizationService'
 import SettingsService from './settingsService'
 import { getSearchSyncWorkerEmitter } from '../serverless/utils/serviceSQS'
+import isFeatureEnabled from '../feature-flags/isFeatureEnabled'
+import { FeatureFlag } from '../types/common'
+import SegmentRepository from '../database/repositories/segmentRepository'
 
 export default class MemberService extends LoggerBase {
   options: IServiceOptions
@@ -351,10 +354,6 @@ export default class MemberService extends LoggerBase {
           },
           fillRelations,
         )
-
-        if (fireSync) {
-          await searchSyncEmitter.triggerMemberSync(this.options.currentTenant.id, record.id)
-        }
       } else {
         // It is important to call it with doPopulateRelations=false
         // because otherwise the performance is greatly decreased in integrations
@@ -370,9 +369,6 @@ export default class MemberService extends LoggerBase {
           },
           fillRelations,
         )
-        if (fireSync) {
-          await searchSyncEmitter.triggerMemberSync(this.options.currentTenant.id, record.id)
-        }
 
         telemetryTrack(
           'Member created',
@@ -387,6 +383,10 @@ export default class MemberService extends LoggerBase {
       }
 
       await SequelizeRepository.commitTransaction(transaction)
+
+      if (fireSync) {
+        await searchSyncEmitter.triggerMemberSync(this.options.currentTenant.id, record.id)
+      }
 
       if (!existing && fireCrowdWebhooks) {
         try {
@@ -577,6 +577,7 @@ export default class MemberService extends LoggerBase {
 
       const searchSyncEmitter = await getSearchSyncWorkerEmitter()
       await searchSyncEmitter.triggerMemberSync(this.options.currentTenant.id, originalId)
+      await searchSyncEmitter.triggerRemoveMember(this.options.currentTenant.id, toMergeId)
 
       this.options.log.info({ originalId, toMergeId }, 'Members merged!')
       return { status: 200, mergedId: originalId }
@@ -961,8 +962,21 @@ export default class MemberService extends LoggerBase {
     offset: number,
     limit: number,
     orderBy: string,
+    segments: string[],
   ) {
-    return MemberRepository.findAndCountActive(filters, limit, offset, orderBy, this.options)
+    const memberAttributeSettings = (
+      await MemberAttributeSettingsRepository.findAndCountAll({}, this.options)
+    ).rows
+
+    return MemberRepository.findAndCountActiveOpensearch(
+      filters,
+      limit,
+      offset,
+      orderBy,
+      this.options,
+      memberAttributeSettings,
+      segments,
+    )
   }
 
   async findAndCountAll(args) {
@@ -976,6 +990,16 @@ export default class MemberService extends LoggerBase {
   }
 
   async queryV2(data) {
+    if (await isFeatureEnabled(FeatureFlag.SEGMENTS, this.options)) {
+      if (data.segments.length !== 1) {
+        throw new Error400(
+          `This operation can have exactly one segment. Found ${data.segments.length} segments.`,
+        )
+      }
+    } else {
+      data.segments = [(await new SegmentRepository(this.options).getDefaultSegment()).id]
+    }
+
     const memberAttributeSettings = (
       await MemberAttributeSettingsRepository.findAndCountAll({}, this.options)
     ).rows
@@ -988,6 +1012,7 @@ export default class MemberService extends LoggerBase {
         orderBy: data.orderBy || undefined,
         countOnly: data.countOnly || false,
         attributesSettings: memberAttributeSettings,
+        segments: data.segments,
       },
       this.options,
     )

@@ -1,6 +1,6 @@
 import { Logger } from '@crowd/logging'
-import { SegmentData } from '../types/segmentTypes'
 import { RedisClient } from '@crowd/redis'
+import { SegmentData } from '../types/segmentTypes'
 
 export interface IServiceOptions {
   log: Logger

@@ -1,7 +1,7 @@
 import { DB_CONFIG, REDIS_CONFIG } from '@/conf'
 import { MemberRepository } from '@/repo/member.repo'
 import { OpenSearchService } from '@/service/opensearch.service'
-import { SyncService } from '@/service/sync.service'
+import { MemberSyncService } from '@/service/member.sync.service'
 import { DbStore, getDbConnection } from '@crowd/database'
 import { getServiceLogger } from '@crowd/logging'
 import { getRedisClient } from '@crowd/redis'
@@ -19,11 +19,12 @@ setImmediate(async () => {
 
   const repo = new MemberRepository(redis, store, log)
 
-  const tenantIds = await repo.getUnsyncedTenantIds()
+  const tenantIds = await repo.getTenantIds()
 
-  const service = new SyncService(redis, store, openSearchService, log)
+  const service = new MemberSyncService(redis, store, openSearchService, log)
 
   for (const tenantId of tenantIds) {
-    await service.syncTenantMembers(tenantId, false)
+    await service.syncTenantMembers(tenantId, 500)
   }
+  process.exit(0)
 })
