@@ -2,6 +2,7 @@ import lodash from 'lodash'
 import moment from 'moment'
 import Sequelize, { QueryTypes } from 'sequelize'
 import { getCleanString } from '@crowd/common'
+import { Edition } from '@crowd/types'
 import SequelizeRepository from './sequelizeRepository'
 import AuditLogRepository from './auditLogRepository'
 import SequelizeFilterUtils from '../utils/sequelizeFilterUtils'
@@ -11,7 +12,7 @@ import { isUserInTenant } from '../utils/userTenantUtils'
 import { IRepositoryOptions } from './IRepositoryOptions'
 import SegmentRepository from './segmentRepository'
 import isFeatureEnabled from '../../feature-flags/isFeatureEnabled'
-import { FeatureFlag, Edition } from '../../types/common'
+import { FeatureFlag } from '../../types/common'
 import Plans from '../../security/plans'
 import { API_CONFIG } from '../../conf'
 
@@ -65,8 +66,8 @@ class TenantRepository {
     }
 
     const trialEndsAt = moment().add(14, 'days').isAfter('2023-01-15')
-    ? moment().add(14, 'days').toISOString()
-    : '2023-01-15'
+      ? moment().add(14, 'days').toISOString()
+      : '2023-01-15'
 
     const record = await options.database.tenant.create(
       {
